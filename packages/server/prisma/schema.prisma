@@ -1,0 +1,76 @@
+// Prisma Schema for Messenger App
+// 
+// RELATIONSHIPS EXPLAINED:
+// - User can participate in many Threads (via ThreadParticipant join table)
+// - Thread can have many Users (via ThreadParticipant join table)
+// - Thread has many Messages
+// - Message belongs to one Thread and one User (sender)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed with bcrypt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  messages     Message[]           // Messages this user has sent
+  threads      ThreadParticipant[] // Threads this user is part of
+
+  @@map("users") // Table name in database
+}
+
+model Thread {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  participants ThreadParticipant[] // Users in this thread
+  messages     Message[]           // Messages in this thread
+
+  @@map("threads")
+}
+
+// Join table for User <-> Thread many-to-many relationship
+model ThreadParticipant {
+  id         String    @id @default(cuid())
+  userId     String
+  threadId   String
+  lastReadAt DateTime  @default(now())
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only be added to a thread once
+  @@unique([userId, threadId])
+  @@map("thread_participants")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  
+  // Foreign keys
+  threadId String
+  senderId String
+
+  // Relations
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Index for efficient message retrieval by thread
+  @@index([threadId, createdAt])
+  @@map("messages")
+}

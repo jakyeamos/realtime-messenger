@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "thread_participants" ADD COLUMN     "lastReadAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
